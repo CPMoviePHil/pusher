@@ -1,13 +1,14 @@
 class Values {
-  static String server = '';
-  static String serial = '';
-  static String deviceToken = '';
+  static String server;
+  static String serial;
+  static String deviceToken;
+  static bool ttsSetting;
 
-  static final Values _values = Values.internal();
+  static final Values _values = Values._internal();
 
   factory Values() {
     return _values;
   }
 
-  Values.internal();
+  Values._internal();
 }

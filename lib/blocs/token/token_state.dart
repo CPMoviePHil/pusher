@@ -10,8 +10,9 @@ class TokenInitial extends TokenState {}
 
 class TokenSetting extends TokenState {}
 
-class TokenSet extends TokenState {
+class TokenFinished extends TokenState {
   final String deviceToken;
 
-  TokenSet({this.deviceToken});
+  TokenFinished({this.deviceToken});
 }
+class TokenSetupCompleted extends TokenState {}

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:push_ilolly/blocs/devices/devices_bloc.dart';
 import 'package:push_ilolly/blocs/resource/resource_bloc.dart';
+import 'package:push_ilolly/blocs/upload/upload_bloc.dart';
 import 'package:push_ilolly/models/SerialNumber.dart';
+import 'package:push_ilolly/setting.dart';
 import 'package:push_ilolly/values.dart';
 
 class Devices extends StatefulWidget{
@@ -124,21 +126,63 @@ class _DevicesPage extends State<Devices> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  DropdownButton<String>(
-                                    items: devices.map((SerialNumber value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value.serialNumber,
-                                        child: Text(value.serialNumber),
-                                      );
-                                    },).toList(),
-                                    onChanged: (_) {},
+                                  BlocProvider(
+                                    create: (context) => UploadBloc(),
+                                    child: BlocBuilder<UploadBloc, UploadState>(
+                                      builder: (context, state){
+                                        /*final uploadBloc = BlocProvider.of<UploadBloc>(context);*/
+                                        return DropdownButton<String>(
+                                          hint: Text("${Values.serial??''}"),
+                                          items: devices.map((SerialNumber value) {
+                                            return DropdownMenuItem<String>(
+                                              value: value.serialNumber,
+                                              child: Text(value.serialNumber),
+                                            );
+                                          },).toList(),
+                                          onChanged: (_) {
+                                            Values.serial = _;
+                                            /*uploadBloc.add(UploadBeforeToServer());*/
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => Setting(),
+                                              ),
+                                            ).then((value) => setState((){}));
+                                          },
+                                        );
+                                      },
+                                    ),
                                   ),
                                   Padding(
                                     padding: EdgeInsets.only(right: 10,),
                                   ),
                                   ElevatedButton(
-                                    onPressed: () {
-                                      devicesBloc.add(DevicesToManual(),);
+                                    onPressed: () async {
+                                      showDialog<void>(
+                                        context: context,
+                                        builder: (context){
+                                          return AlertDialog(
+                                            title: Text("提醒",),
+                                            content: Text(
+                                              "假如尚未先建立機台序號的話，執行下列手動新增聲音設定會失敗喔!",
+                                            ),
+                                            actions: [
+                                              ElevatedButton(
+                                                onPressed: (){
+                                                  Navigator.of(context).pop();
+                                                },
+                                                child: Text("取消",),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: (){
+                                                  devicesBloc.add(DevicesToManual(),);
+                                                },
+                                                child: Text("確定",),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
                                     },
                                     child: Text(
                                       "手動新增",

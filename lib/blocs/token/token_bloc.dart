@@ -13,8 +13,11 @@ class TokenBloc extends Bloc<TokenEvent, TokenState> {
   Stream<TokenState> mapEventToState(
     TokenEvent event,
   ) async* {
-    if (event is SetToken) {
-      yield TokenSet();
+    if (event is NeedToSetToken) {
+      yield TokenInitial();
+    }
+    if (event is CompletedToken) {
+      yield TokenFinished();
     }
     if (event is ToSetToken) {
       yield TokenSetting();
