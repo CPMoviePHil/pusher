@@ -21,9 +21,14 @@ environment:
   sdk: ">=2.7.0 <3.0.0"
 
 dependencies:
+  equatable: ^2.0.0
   pushy_flutter: 1.1.9
-  audioplayers: ^0.17.0
+  audioplayers: ^0.18.2
   flutter_tts: ^3.0.0
+  shared_preferences: ^2.0.5
+  flutter_bloc: ^7.0.0
+  bloc: ^7.0.0
+  http: ^0.13.1
   flutter:
     sdk: flutter
 
