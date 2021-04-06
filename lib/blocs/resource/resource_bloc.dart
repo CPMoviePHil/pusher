@@ -17,6 +17,9 @@ class ResourceBloc extends Bloc<ResourceEvent, ResourceState> {
   Stream<ResourceState> mapEventToState(
     ResourceEvent event,
   ) async* {
+    if (event is ResourceToInit) {
+      yield ResourceInitial();
+    }
     if (event is ResourceFetch) {
       try {
         Uri uri = Uri.parse(Values.server + '/api/face/indexMachineSerialNumber');

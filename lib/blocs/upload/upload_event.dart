@@ -7,6 +7,8 @@ abstract class UploadEvent extends Equatable {
   List<Object> get props => [];
 }
 
+class UploadToInit extends UploadEvent {}
+
 class UploadToServer extends UploadEvent {}
 
 class UploadBeforeToServer extends UploadEvent {}

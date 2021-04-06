@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:push_ilolly/blocs/token/token_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:push_ilolly/prefs/utils.dart';
 import 'package:push_ilolly/values.dart';
 import 'package:http/http.dart' as http;
@@ -19,6 +19,9 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
   Stream<UploadState> mapEventToState(
     UploadEvent event,
   ) async* {
+    if (event is UploadToInit) {
+      yield UploadInitial();
+    }
     if (event is UploadBeforeToServer) {
       add(UploadToServer());
       yield UploadLoading();
@@ -40,6 +43,7 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
             "device_token": Values.deviceToken,
           },),
         );
+        print(data.statusCode);
         if (data.statusCode == 200) {
           if (json.decode(data.body)['result']) {
             Prefs.preferences = await SharedPreferences.getInstance();
@@ -47,19 +51,14 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
             Prefs.preferences.setString("serial", Values.serial,);
             Prefs.preferences.setString("deviceToken", Values.deviceToken,);
             Prefs.preferences.setBool("ttsSetting", true,);
-            final tokenBloc = TokenBloc();
-            tokenBloc.add(CompletedToken());
             yield UploadSuccess();
           } else {
-            print('e3');
             yield UploadFailed();
           }
         } else {
-          print('e2:');
           yield UploadFailed();
         }
       } catch (e) {
-        print('e1:$e');
         yield UploadFailed();
       }
     }

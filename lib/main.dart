@@ -1,8 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:push_ilolly/blocs/application/application_bloc.dart';
@@ -10,11 +11,17 @@ import 'package:push_ilolly/blocs/resource/resource_bloc.dart';
 import 'package:push_ilolly/blocs/server/server_bloc.dart';
 import 'package:push_ilolly/blocs/token/token_bloc.dart';
 import 'package:push_ilolly/choices.dart';
+import 'package:push_ilolly/prefs/utils.dart';
 import 'package:push_ilolly/values.dart';
 import 'package:pushy_flutter/pushy_flutter.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'blocs/devices/devices_bloc.dart';
 import 'blocs/observer.dart';
+import 'blocs/upload/upload_bloc.dart';
+
+import 'package:http/http.dart' as http;
 
 FlutterTts flutterTts = FlutterTts();
 
@@ -37,15 +44,37 @@ Future<void> textToSpeech(msg) async {
   //await flutterTts.setQueueMode(1);
 }
 
-Future<void> playMusic(url) async {
-  AudioPlayer audioPlayer = AudioPlayer();
-  int result = await audioPlayer.play(url);
-  if (result == 1) {
-    // success
-  }
+void main() {
+  Bloc.observer = SimpleBlocObserver();
+  runApp(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<ApplicationBloc>(
+            create: (BuildContext context) => ApplicationBloc(),
+          ),
+          BlocProvider<UploadBloc>(
+            create: (BuildContext context) => UploadBloc(),
+          ),
+          BlocProvider<TokenBloc>(
+            create: (BuildContext context) => TokenBloc(
+              applicationBloc: BlocProvider.of<ApplicationBloc>(context),
+              uploadBloc: BlocProvider.of<UploadBloc>(context),
+            ),
+          ),
+          BlocProvider<ServerBloc>(
+            create: (BuildContext context) => ServerBloc(),
+          ),
+          BlocProvider<ResourceBloc>(
+            create: (BuildContext context) => ResourceBloc(),
+          ),
+          BlocProvider<DevicesBloc>(
+            create: (context) => DevicesBloc(),
+          ),
+        ],
+        child: Main(),
+      ),
+  );
 }
-
-void main() => runApp(Main());
 
 class Main extends StatelessWidget {
   @override
@@ -74,20 +103,13 @@ class _PushyDemoState extends State<PushyDemo> {
 
   @override
   void initState() {
-    Bloc.observer = SimpleBlocObserver();
-    final appBloc = ApplicationBloc();
-    appBloc.add(BeforeGetApplicationEvent());
-    initPlatformState();
     super.initState();
-    //initPlatformState();
-  }
-
-  Future<void> playMusic(url) async {
-    AudioPlayer audioPlayer = AudioPlayer();
-    int result = await audioPlayer.play(url);
-    if (result == 1) {
-      // success
-    }
+    initPlatformState();
+    BlocProvider.of<TokenBloc>(context);
+    Future.delayed(Duration(seconds: 2)).then((value) {
+      final appBloc = BlocProvider.of<ApplicationBloc>(context);
+      appBloc.add(BeforeGetApplicationEvent());
+    });
   }
 
   Future<void> initPlatformState() async {
@@ -125,6 +147,29 @@ class _PushyDemoState extends State<PushyDemo> {
     });
   }
 
+  Future<void> testTTS ({String msg='人臉辨識機測試',}) async {
+    Uri notifyUri = Uri.parse(
+        'https://api.pushy.me/push?api_key=65139183b78cf94017209edd9f7d2907bb3cd20708c7edc1c3a3e691532dd180');
+    await http.post(
+      notifyUri,
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(
+        {
+          "to": "${Values.deviceToken}",
+          "data": {
+            "message": "$msg",
+          },
+          "notification": {
+            "body": "Hello World \u270c",
+            "badge": 1
+          }
+        },
+      ),
+    );
+  }
+
   Widget settingWidget() {
     return Center(
       child: Column(
@@ -134,7 +179,7 @@ class _PushyDemoState extends State<PushyDemo> {
           Padding(
             padding: const EdgeInsets.all(10),
             child: Text(
-              Values.server,
+              "後台網址:${Values.server}",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -145,7 +190,7 @@ class _PushyDemoState extends State<PushyDemo> {
           Padding(
             padding: const EdgeInsets.all(10),
             child: Text(
-              Values.serial,
+              "機台序號:${Values.serial}",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -156,11 +201,103 @@ class _PushyDemoState extends State<PushyDemo> {
           Padding(
             padding: const EdgeInsets.all(10),
             child: Text(
-              Values.deviceToken,
+              "Device Token:${Values.deviceToken}",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
                 color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.only(top: 20),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: 30,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ElevatedButton(
+                    onPressed: () async {
+                      TextEditingController controller = TextEditingController();
+                      await showDialog<void>(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: Text('文字轉語音測試',),
+                              content: TextField(
+                                controller: controller,
+                                decoration: InputDecoration(
+                                  hintText: '自行輸入測試',
+                                ),
+                              ),
+                              actions: [
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    await testTTS();
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: Text('一般測試',),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    await testTTS(msg: controller.text,);
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: Text('確認',),
+                                ),
+                              ],
+                            );
+                          }
+                      );
+                    },
+                    child: Text(
+                      "測試文字轉聲音",
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      bool result = await showDialog<bool>(
+                        barrierDismissible: false,
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: Text("取消設置"),
+                            content: Text("確定取消設置?"),
+                            actions: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(false);
+                                },
+                                child: Text("取消"),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(true);
+                                },
+                                child: Text("確定"),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      if (result) {
+                        Prefs.preferences = await SharedPreferences.getInstance();
+                        Prefs.preferences.clear();
+                        //Values.deviceToken = '';
+                        Values.serial = null;
+                        Values.server = null;
+                        Values.ttsSetting = null;
+                        TokenBloc tokenBloc = BlocProvider.of<TokenBloc>(context);
+                        tokenBloc.add(NeedToSetToken());
+                      }
+                    },
+                    child: Text(
+                      "清除設置",
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -200,55 +337,51 @@ class _PushyDemoState extends State<PushyDemo> {
           },
         );
       },
-      child:  Scaffold(
+      child: Scaffold(
         appBar: AppBar(
           title: const Text('人臉辨識設置'),
         ),
-        body: Builder(
-          builder: (context) => BlocProvider(
-            create: (context) => TokenBloc(),
-            child: BlocBuilder<TokenBloc, TokenState>(
-              builder: (context, state) {
-                final tokenBloc = BlocProvider.of<TokenBloc>(context);
-                if (state is TokenInitial) {
-                  return Container(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Center(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              tokenBloc.add(ToSetToken());
-                            },
-                            child: Text('設置'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                if (state is TokenSetting) {
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('伺服器設置'),
-                      MultiBlocProvider(
-                        providers: [
-                          BlocProvider<ServerBloc>(
-                            create: (BuildContext context) => ServerBloc(),
-                          ),
-                          BlocProvider<ResourceBloc>(
-                            create: (BuildContext context) => ResourceBloc(),
+        body: BlocBuilder<ApplicationBloc, ApplicationState>(
+          builder: (context, state) {
+            if (state is ApplicationSetupCompleted) {
+              return BlocBuilder<TokenBloc, TokenState>(
+                builder: (context, state) {
+                  final tokenBloc = BlocProvider.of<TokenBloc>(context);
+                  if (state is TokenInitial) {
+                    return Container(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Center(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                tokenBloc.add(ToSetToken());
+                              },
+                              child: Text('設置'),
+                            ),
                           ),
                         ],
-                        child: BlocBuilder<ServerBloc, ServerState>(
+                      ),
+                    );
+                  }
+                  if (state is TokenSetting) {
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('伺服器設置'),
+                        BlocBuilder<ServerBloc, ServerState>(
                           builder: (context, state) {
-                            final serverBloc = BlocProvider.of<ServerBloc>(context);
+                            final serverBloc =
+                                BlocProvider.of<ServerBloc>(context);
                             if (state is ServerFromField) {
                               if (Values.server == null) {
-                                textEditingController = TextEditingController(text: "https://",);
+                                textEditingController = TextEditingController(
+                                  text: "https://",
+                                );
                               } else {
-                                textEditingController = TextEditingController(text: "${Values.server}",);
+                                textEditingController = TextEditingController(
+                                  text: "${Values.server}",
+                                );
                               }
                               return Column(
                                 children: [
@@ -256,7 +389,9 @@ class _PushyDemoState extends State<PushyDemo> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Container(
-                                        width: MediaQuery.of(context).size.width * 0.7,
+                                        width:
+                                            MediaQuery.of(context).size.width *
+                                                0.7,
                                         child: TextField(
                                           controller: textEditingController,
                                           decoration: InputDecoration(
@@ -267,9 +402,11 @@ class _PushyDemoState extends State<PushyDemo> {
                                     ],
                                   ),
                                   Container(
-                                    width: MediaQuery.of(context).size.width * 0.7,
+                                    width:
+                                        MediaQuery.of(context).size.width * 0.7,
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         ElevatedButton(
                                           onPressed: () => serverBloc.add(
@@ -281,13 +418,14 @@ class _PushyDemoState extends State<PushyDemo> {
                                         ),
                                         ElevatedButton(
                                           onPressed: () {
-                                            Values.server = textEditingController.text;
+                                            Values.server =
+                                                textEditingController.text;
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
                                                 builder: (context) => Choice(),
                                               ),
-                                            ).then((value) => setState((){}));
+                                            ).then((value) => setState(() {}));
                                           },
                                           child: Text(
                                             "確認",
@@ -303,27 +441,31 @@ class _PushyDemoState extends State<PushyDemo> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 DropdownButton<String>(
-                                  hint: Text('${Values.server??''}'),
+                                  hint: Text('${Values.server ?? ''}'),
                                   items: <String>[
                                     'https://ilolly.shoesconn.com',
-                                  ].map((String value) {
-                                    return DropdownMenuItem<String>(
-                                      value: value,
-                                      child: Text(value),
-                                    );
-                                  },).toList(),
+                                  ].map(
+                                    (String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    },
+                                  ).toList(),
                                   onChanged: (_) {
-                                    Values.server = _ ;
+                                    Values.server = _;
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => Choice(),
                                       ),
-                                    ).then((value) => setState((){}));
+                                    ).then((value) => setState(() {}));
                                   },
                                 ),
                                 Padding(
-                                  padding: EdgeInsets.only(right: 10,),
+                                  padding: EdgeInsets.only(
+                                    right: 10,
+                                  ),
                                 ),
                                 ElevatedButton(
                                   onPressed: () {
@@ -337,16 +479,36 @@ class _PushyDemoState extends State<PushyDemo> {
                             );
                           },
                         ),
-                      ),
-                    ],
-                  );
-                }
-                return settingWidget();
-              },
-            ),
-          ),
+                      ],
+                    );
+                  }
+                  return settingWidget();
+                },
+              );
+            }
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+          },
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    ApplicationBloc applicationBloc = BlocProvider.of<ApplicationBloc>(context);
+    TokenBloc tokenBloc = BlocProvider.of<TokenBloc>(context);
+    UploadBloc uploadBloc = BlocProvider.of<UploadBloc>(context);
+    ServerBloc serverBloc = BlocProvider.of<ServerBloc>(context);
+    ResourceBloc resourceBloc = BlocProvider.of<ResourceBloc>(context);
+    DevicesBloc devicesBloc = BlocProvider.of<DevicesBloc>(context);
+    applicationBloc.close();
+    tokenBloc.close();
+    uploadBloc.close();
+    serverBloc.close();
+    resourceBloc.close();
+    devicesBloc.close();
+    super.dispose();
   }
 }

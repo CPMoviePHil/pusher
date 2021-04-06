@@ -19,20 +19,12 @@ class ApplicationBloc extends Bloc<ApplicationEvent, ApplicationState> {
     ApplicationEvent event,
   ) async* {
     if (event is GetApplicationEvent) {
-      TokenBloc tokenBloc = TokenBloc();
       Prefs.preferences = await SharedPreferences.getInstance();
       Values.ttsSetting = Prefs.preferences.getBool('ttsSetting');
       Values.server = Prefs.preferences.getString('server');
       Values.serial = Prefs.preferences.getString('serial');
-      Values.deviceToken = Prefs.preferences.getString('deviceToken');
+      //Values.deviceToken = Prefs.preferences.getString('deviceToken');
       yield ApplicationSetupCompleted();
-      if (Values.ttsSetting == null) {
-        tokenBloc.add(CompletedToken(deviceToken: Values.deviceToken,));
-      } else {
-        if (Values.ttsSetting) {
-          tokenBloc.add(NeedToSetToken());
-        }
-      }
      }
     if (event is BeforeGetApplicationEvent) {
       yield ApplicationSetting();

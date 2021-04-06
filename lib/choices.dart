@@ -14,17 +14,19 @@ class _ChoicePage extends State<Choice>{
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('設置選擇'),
+        title: const Text(
+          '設置選擇',
+        ),
       ),
       body: Container(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ElevatedButton(
+              /*ElevatedButton(
                 onPressed: null,
                 child: Text("設置裝置序號(功能尚未建立)"),
-              ),
+              ),*/
               Padding(
                 padding: EdgeInsets.only(top: 30,),
               ),
