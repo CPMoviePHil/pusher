@@ -11,6 +11,7 @@ import 'package:push_ilolly/blocs/resource/resource_bloc.dart';
 import 'package:push_ilolly/blocs/server/server_bloc.dart';
 import 'package:push_ilolly/blocs/token/token_bloc.dart';
 import 'package:push_ilolly/choices.dart';
+import 'package:push_ilolly/configs/configs.dart';
 import 'package:push_ilolly/prefs/utils.dart';
 import 'package:push_ilolly/values.dart';
 import 'package:pushy_flutter/pushy_flutter.dart';
@@ -47,32 +48,32 @@ Future<void> textToSpeech(msg) async {
 void main() {
   Bloc.observer = SimpleBlocObserver();
   runApp(
-      MultiBlocProvider(
-        providers: [
-          BlocProvider<ApplicationBloc>(
-            create: (BuildContext context) => ApplicationBloc(),
+    MultiBlocProvider(
+      providers: [
+        BlocProvider<ApplicationBloc>(
+          create: (BuildContext context) => ApplicationBloc(),
+        ),
+        BlocProvider<UploadBloc>(
+          create: (BuildContext context) => UploadBloc(),
+        ),
+        BlocProvider<TokenBloc>(
+          create: (BuildContext context) => TokenBloc(
+            applicationBloc: BlocProvider.of<ApplicationBloc>(context),
+            uploadBloc: BlocProvider.of<UploadBloc>(context),
           ),
-          BlocProvider<UploadBloc>(
-            create: (BuildContext context) => UploadBloc(),
-          ),
-          BlocProvider<TokenBloc>(
-            create: (BuildContext context) => TokenBloc(
-              applicationBloc: BlocProvider.of<ApplicationBloc>(context),
-              uploadBloc: BlocProvider.of<UploadBloc>(context),
-            ),
-          ),
-          BlocProvider<ServerBloc>(
-            create: (BuildContext context) => ServerBloc(),
-          ),
-          BlocProvider<ResourceBloc>(
-            create: (BuildContext context) => ResourceBloc(),
-          ),
-          BlocProvider<DevicesBloc>(
-            create: (context) => DevicesBloc(),
-          ),
-        ],
-        child: Main(),
-      ),
+        ),
+        BlocProvider<ServerBloc>(
+          create: (BuildContext context) => ServerBloc(),
+        ),
+        BlocProvider<ResourceBloc>(
+          create: (BuildContext context) => ResourceBloc(),
+        ),
+        BlocProvider<DevicesBloc>(
+          create: (context) => DevicesBloc(),
+        ),
+      ],
+      child: Main(),
+    ),
   );
 }
 
@@ -80,6 +81,12 @@ class Main extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      builder: (context, child) {
+        return MediaQuery(
+          child: child,
+          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+        );
+      },
       title: 'Pushy',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -147,9 +154,10 @@ class _PushyDemoState extends State<PushyDemo> {
     });
   }
 
-  Future<void> testTTS ({String msg='人臉辨識機測試',}) async {
-    Uri notifyUri = Uri.parse(
-        'https://api.pushy.me/push?api_key=65139183b78cf94017209edd9f7d2907bb3cd20708c7edc1c3a3e691532dd180');
+  Future<void> testTTS({
+    String msg = '人臉辨識機測試',
+  }) async {
+    Uri notifyUri = Uri.parse(Configs.pushyUri + Configs.pushyKey);
     await http.post(
       notifyUri,
       headers: <String, String>{
@@ -161,10 +169,7 @@ class _PushyDemoState extends State<PushyDemo> {
           "data": {
             "message": "$msg",
           },
-          "notification": {
-            "body": "Hello World \u270c",
-            "badge": 1
-          }
+          "notification": {"body": "Hello World \u270c", "badge": 1}
         },
       ),
     );
@@ -220,12 +225,15 @@ class _PushyDemoState extends State<PushyDemo> {
                 children: [
                   ElevatedButton(
                     onPressed: () async {
-                      TextEditingController controller = TextEditingController();
+                      TextEditingController controller =
+                          TextEditingController();
                       await showDialog<void>(
                           context: context,
                           builder: (context) {
                             return AlertDialog(
-                              title: Text('文字轉語音測試',),
+                              title: Text(
+                                '文字轉語音測試',
+                              ),
                               content: TextField(
                                 controller: controller,
                                 decoration: InputDecoration(
@@ -238,19 +246,24 @@ class _PushyDemoState extends State<PushyDemo> {
                                     await testTTS();
                                     Navigator.of(context).pop();
                                   },
-                                  child: Text('一般測試',),
+                                  child: Text(
+                                    '一般測試',
+                                  ),
                                 ),
                                 ElevatedButton(
                                   onPressed: () async {
-                                    await testTTS(msg: controller.text,);
+                                    await testTTS(
+                                      msg: controller.text,
+                                    );
                                     Navigator.of(context).pop();
                                   },
-                                  child: Text('確認',),
+                                  child: Text(
+                                    '確認',
+                                  ),
                                 ),
                               ],
                             );
-                          }
-                      );
+                          });
                     },
                     child: Text(
                       "測試文字轉聲音",
@@ -283,13 +296,15 @@ class _PushyDemoState extends State<PushyDemo> {
                         },
                       );
                       if (result) {
-                        Prefs.preferences = await SharedPreferences.getInstance();
+                        Prefs.preferences =
+                            await SharedPreferences.getInstance();
                         Prefs.preferences.clear();
                         //Values.deviceToken = '';
                         Values.serial = null;
                         Values.server = null;
                         Values.ttsSetting = null;
-                        TokenBloc tokenBloc = BlocProvider.of<TokenBloc>(context);
+                        TokenBloc tokenBloc =
+                            BlocProvider.of<TokenBloc>(context);
                         tokenBloc.add(NeedToSetToken());
                       }
                     },

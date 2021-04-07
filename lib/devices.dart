@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:push_ilolly/blocs/devices/devices_bloc.dart';
 import 'package:push_ilolly/blocs/resource/resource_bloc.dart';
-import 'package:push_ilolly/blocs/token/token_bloc.dart';
 import 'package:push_ilolly/blocs/upload/upload_bloc.dart';
 import 'package:push_ilolly/models/SerialNumber.dart';
 import 'package:push_ilolly/setting.dart';

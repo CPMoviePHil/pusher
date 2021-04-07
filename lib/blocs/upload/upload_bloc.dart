@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:push_ilolly/configs/configs.dart';
 import 'package:push_ilolly/prefs/utils.dart';
 import 'package:push_ilolly/values.dart';
 import 'package:http/http.dart' as http;
@@ -28,11 +29,9 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
     }
     if (event is UploadToServer) {
       try {
-        Uri uri = Uri.parse(Values.server + '/api/face/updataMachineDeviceToken');
-        print({
-          "serial_number": Values.serial,
-          "device_token": Values.deviceToken,
-        });
+        Uri uri = Uri.parse(
+          Values.server + Configs.uploadDeviceTokenApi,
+        );
         final data = await http.post(
           uri,
           headers: <String, String>{
@@ -43,7 +42,6 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
             "device_token": Values.deviceToken,
           },),
         );
-        print(data.statusCode);
         if (data.statusCode == 200) {
           if (json.decode(data.body)['result']) {
             Prefs.preferences = await SharedPreferences.getInstance();

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:http/http.dart' as http;
+import 'package:push_ilolly/configs/configs.dart';
 import 'package:push_ilolly/values.dart';
 import 'package:push_ilolly/models/SerialNumber.dart';
 
@@ -22,7 +23,9 @@ class ResourceBloc extends Bloc<ResourceEvent, ResourceState> {
     }
     if (event is ResourceFetch) {
       try {
-        Uri uri = Uri.parse(Values.server + '/api/face/indexMachineSerialNumber');
+        Uri uri = Uri.parse(
+          Values.server + Configs.fetchDeviceSeriesApi,
+        );
         final data = await http.post(
           uri,
           headers: <String, String>{
@@ -33,7 +36,9 @@ class ResourceBloc extends Bloc<ResourceEvent, ResourceState> {
         if (data.statusCode == 200) {
           if (json.decode(data.body)['result']) {
             List dk = json.decode(data.body)['data'] as List;
-            yield ResourceSuccess(devices: dk.map((e) => SerialNumber.fromJson(e)).toList(),);
+            yield ResourceSuccess(
+              devices: dk.map((e) => SerialNumber.fromJson(e)).toList(),
+            );
           } else {
             yield ResourceFailed();
           }
