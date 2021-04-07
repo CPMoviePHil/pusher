@@ -14,6 +14,7 @@ import 'package:push_ilolly/choices.dart';
 import 'package:push_ilolly/configs/configs.dart';
 import 'package:push_ilolly/prefs/utils.dart';
 import 'package:push_ilolly/values.dart';
+import 'package:push_ilolly/utils/utils.dart';
 import 'package:pushy_flutter/pushy_flutter.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -107,10 +108,28 @@ class PushyDemo extends StatefulWidget {
 
 class _PushyDemoState extends State<PushyDemo> {
   TextEditingController textEditingController;
+  NetworkConnectionStatus connect = NetworkConnectionStatus.instance;
 
   @override
   void initState() {
     super.initState();
+    connect.init();
+    connect.myStream.listen((event) {
+      if (!event['networkStatus']) {
+        Dialogs.showNoNetworkDialog(
+          context: context,
+        );
+        connect.changeStatus(-1);
+      } else {
+        if (connect.first == -1) {
+          connect.changeStatus(0);
+          Navigator.of(context).pop();
+          setState(() {
+
+          });
+        }
+      }
+    });
     initPlatformState();
     BlocProvider.of<TokenBloc>(context);
     Future.delayed(Duration(seconds: 2)).then((value) {
@@ -524,6 +543,7 @@ class _PushyDemoState extends State<PushyDemo> {
     serverBloc.close();
     resourceBloc.close();
     devicesBloc.close();
+    connect.disposeStream();
     super.dispose();
   }
 }
