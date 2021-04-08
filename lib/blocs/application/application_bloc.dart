@@ -23,6 +23,12 @@ class ApplicationBloc extends Bloc<ApplicationEvent, ApplicationState> {
       Values.ttsSetting = Prefs.preferences.getBool('ttsSetting');
       Values.server = Prefs.preferences.getString('server');
       Values.serial = Prefs.preferences.getString('serial');
+      bool waiting = Prefs.preferences.getBool('waiting');
+      if (waiting == null) {
+        Values.waiting = false;
+      } else {
+        Values.waiting = waiting;
+      }
       //Values.deviceToken = Prefs.preferences.getString('deviceToken');
       yield ApplicationSetupCompleted();
      }

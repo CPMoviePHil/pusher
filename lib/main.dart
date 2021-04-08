@@ -26,9 +26,8 @@ import 'blocs/upload/upload_bloc.dart';
 import 'package:http/http.dart' as http;
 
 FlutterTts flutterTts = FlutterTts();
-
+StreamController notifyStream = StreamController();
 void backgroundNotificationListener(Map<String, dynamic> data) async {
-  print('Received notification: $data');
   await textToSpeech(data['message']);
   String notificationTitle = 'MyApp';
   String notificationText = data['message'] ?? 'Hello World!';
@@ -37,13 +36,21 @@ void backgroundNotificationListener(Map<String, dynamic> data) async {
 }
 
 Future<void> textToSpeech(msg) async {
-  flutterTts.getVoices.then((value) => print(value));
+  //flutterTts.getVoices.then((value) => print(value));
+  if (Values.waiting) {
+    await flutterTts.setQueueMode(1);
+  }
+  if (!Values.waiting) {
+    await flutterTts.setQueueMode(0);
+    //await flutterTts.;
+    //flutterTts.awaitSpeakCompletion(false);
+  }
   await flutterTts.setSpeechRate(1.0);
   await flutterTts.setVolume(1.0);
   await flutterTts.setPitch(1.0);
-  await flutterTts.setLanguage("zh-TW");
+  await flutterTts.setLanguage("en-US");
   await flutterTts.speak(msg);
-  //await flutterTts.setQueueMode(1);
+  //await flutterTts.awaitSpeakCompletion(Values.waiting);
 }
 
 void main() {
@@ -203,6 +210,17 @@ class _PushyDemoState extends State<PushyDemo> {
           Padding(
             padding: const EdgeInsets.all(10),
             child: Text(
+              "程式版本:${Values.appVersion}",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Text(
               "後台網址:${Values.server}",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
@@ -234,13 +252,24 @@ class _PushyDemoState extends State<PushyDemo> {
             ),
           ),
           Padding(
+            padding: const EdgeInsets.all(10),
+            child: Text(
+              "語音設置:${Values.waiting?'等待':'不等待'}",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Padding(
             padding: EdgeInsets.only(top: 20),
             child: Container(
               padding: EdgeInsets.symmetric(
                 horizontal: 30,
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   ElevatedButton(
                     onPressed: () async {
@@ -295,6 +324,43 @@ class _PushyDemoState extends State<PushyDemo> {
                         context: context,
                         builder: (context) {
                           return AlertDialog(
+                            title: Text("語音設置"),
+                            content: Text("設置語音播放是否等待"),
+                            actions: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(false);
+                                },
+                                child: Text("不等待"),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(true);
+                                },
+                                child: Text("等待"),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      Values.waiting = result;
+                      Prefs.preferences = await SharedPreferences.getInstance();
+                      Prefs.preferences.setBool("waiting", Values.waiting,);
+                      setState(() {
+
+                      });
+                    },
+                    child: Text(
+                      "語音設置",
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      bool result = await showDialog<bool>(
+                        barrierDismissible: false,
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
                             title: Text("取消設置"),
                             content: Text("確定取消設置?"),
                             actions: [
@@ -315,16 +381,53 @@ class _PushyDemoState extends State<PushyDemo> {
                         },
                       );
                       if (result) {
-                        Prefs.preferences =
-                            await SharedPreferences.getInstance();
-                        Prefs.preferences.clear();
-                        //Values.deviceToken = '';
-                        Values.serial = null;
-                        Values.server = null;
-                        Values.ttsSetting = null;
-                        TokenBloc tokenBloc =
-                            BlocProvider.of<TokenBloc>(context);
-                        tokenBloc.add(NeedToSetToken());
+                        try {
+                          Uri uri = Uri.parse(
+                            Values.server + Configs.uploadDeviceTokenApi,
+                          );
+                          final data = await http.post(
+                            uri,
+                            headers: <String, String>{
+                              'Content-Type': 'application/json',
+                            },
+                            body: jsonEncode({
+                              "serial_number": Values.serial,
+                              "device_token": null,
+                            },),
+                          );
+                          TokenBloc tokenBloc = BlocProvider.of<TokenBloc>(context);
+                          if (data.statusCode == 200) {
+                            if (json.decode(data.body)['result']) {
+                              Prefs.preferences = await SharedPreferences.getInstance();
+                              Prefs.preferences.clear();
+                              //Values.deviceToken = '';
+                              Values.serial = null;
+                              Values.server = null;
+                              Values.ttsSetting = null;
+                              Values.waiting = null;
+                              tokenBloc.add(NeedToSetToken());
+                            } else {
+                              Dialogs.showMessageDialog(
+                                success: false,
+                                context: context,
+                                msg: '清除設置失敗，請重新嘗試',
+                              );
+                            }
+                          } else {
+                            Dialogs.showMessageDialog(
+                              success: false,
+                              context: context,
+                              msg: '清除設置失敗，請重新嘗試',
+                            );
+                          }
+                        } catch(e) {
+                          print("error:$e");
+                          Dialogs.showMessageDialog(
+                            success: false,
+                            context: context,
+                            msg: '清除設置失敗，請重新嘗試',
+                          );
+                        }
                       }
                     },
                     child: Text(

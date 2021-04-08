@@ -49,6 +49,9 @@ class UploadBloc extends Bloc<UploadEvent, UploadState> {
             Prefs.preferences.setString("serial", Values.serial,);
             Prefs.preferences.setString("deviceToken", Values.deviceToken,);
             Prefs.preferences.setBool("ttsSetting", true,);
+            Prefs.preferences.setBool("waiting", false,);
+            Values.ttsSetting = true;
+            Values.waiting = false;
             yield UploadSuccess();
           } else {
             yield UploadFailed();

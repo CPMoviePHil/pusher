@@ -4,6 +4,51 @@ import 'package:flutter/material.dart';
 
 class Dialogs {
 
+  static Future<bool> showMessageDialog({
+    bool success = true,
+    BuildContext context,
+    String msg,
+    Timer timer,
+  }) async {
+    return await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        timer = Timer(Duration(
+          milliseconds: 1500,
+        ), () {
+          timer.cancel();
+          Navigator.of(context).pop();
+        });
+        return AlertDialog(
+          content: Container(
+            padding: EdgeInsets.symmetric(
+              vertical: 15,
+            ),
+            child: Row(
+              children: [
+                AnimatedSwitcher(
+                  duration: Duration(milliseconds: 700,),
+                  child: (success)
+                      ? Icon(Icons.check_circle_outline,)
+                      : Icon(Icons.close,),
+                ),
+                Flexible(
+                  child: Container(
+                    padding: EdgeInsets.only(right: 5,),
+                    child: Text(
+                      '$msg',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   static Future<void> showNoNetworkDialog({
     BuildContext context,
     String selectionType,
